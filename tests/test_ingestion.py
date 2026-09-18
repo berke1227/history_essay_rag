@@ -21,3 +21,14 @@ def test_ingest_folder_bozuk_dosyayi_atlar_digerlerini_isler(
     assert sonuc["islenen_dosya_sayisi"] == 3
     assert sonuc["atlanan_dosya_sayisi"] == 1
     assert sonuc["atlanan_dosyalar"] == ["bozuk.pdf"]
+
+
+def test_ingest_folder_zaten_varsa_tekrar_islemez(test_config: Config, test_vector_store: VectorStore):
+    sonuc1 = ingest_folder(test_config, test_vector_store)
+    assert sonuc1["islenen_dosya_sayisi"] == 3
+    assert sonuc1["atlandi_mi"] is False
+
+    sonuc2 = ingest_folder(test_config, test_vector_store)
+    assert sonuc2["islenen_dosya_sayisi"] == 0
+    assert sonuc2["atlandi_mi"] is True
+    assert sonuc2["toplam_parca_sayisi"] == sonuc1["toplam_parca_sayisi"]

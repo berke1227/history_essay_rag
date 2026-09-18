@@ -31,8 +31,10 @@ def extract_text(pdf_path: Path) -> str:
     return metin
 
 
-def load_articles(folder: Path) -> tuple[list[tuple[str, str]], list[tuple[str, str]]]:
-    """Klasördeki tüm PDF'leri okur.
+def load_articles(
+    folder: Path, only_files: set[str] | None = None
+) -> tuple[list[tuple[str, str]], list[tuple[str, str]]]:
+    """Klasördeki PDF'leri okur. `only_files` verilirse yalnızca belirtilen dosyalar işlenir.
 
     Returns:
         (basarili, basarisiz) — basarili: [(dosya_adi, metin), ...],
@@ -45,6 +47,11 @@ def load_articles(folder: Path) -> tuple[list[tuple[str, str]], list[tuple[str, 
     pdf_dosyalari = sorted(folder.glob("*.pdf"))
     if not pdf_dosyalari:
         raise FileNotFoundError(f"{folder} içinde hiç PDF bulunamadı.")
+
+    if only_files is not None:
+        pdf_dosyalari = [p for p in pdf_dosyalari if p.name in only_files]
+        if not pdf_dosyalari:
+            return [], []
 
     basarili: list[tuple[str, str]] = []
     basarisiz: list[tuple[str, str]] = []

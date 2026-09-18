@@ -119,3 +119,48 @@ def test_kapsam_disi_mesaji_kisa_olsa_da_kabul_edilir(test_config: Config, test_
 
     assert cevap.grounded is True
     assert cevap.text == KAPSAM_DISI_MESAJI
+
+
+def test_baglam_olustur_kelime_butcesini_asar_ise_kirpar():
+    from tdrag.models import RetrievedChunk
+    from tdrag.qa_pipeline import _baglam_olustur
+
+    p1 = RetrievedChunk(
+        chunk=Chunk(id="1", text="kelime " * 20, source_file="doc1.pdf", chunk_index=0),
+        score=0.9,
+    )
+    p2 = RetrievedChunk(
+        chunk=Chunk(id="2", text="kelime " * 20, source_file="doc2.pdf", chunk_index=1),
+        score=0.8,
+    )
+
+    # Bütçe 25 kelime: ilk parça (20 kelime + etiket) sığar, ikinci parça bütçeyi aşar
+    baglam = _baglam_olustur([p1, p2], max_words=25)
+    assert "doc1.pdf" in baglam
+    assert "doc2.pdf" not in baglam
+
+
+def test_answer_question_llm_generate_cagrisina_token_sinirlari_aktarilir(
+    test_config: Config, test_vector_store: VectorStore
+):
+    from unittest.mock import MagicMock
+
+    store = _tek_parcali_store(test_vector_store)
+    mock_llm = MagicMock()
+    # İlk çağrı (cevap üretimi), ikinci çağrı (doğrulama)
+    mock_llm.generate.side_effect = [
+        _uzun_gecerli_cevap(),
+        '{"gecti": true, "geri_bildirim": ""}',
+    ]
+
+    answer_question("Malazgirt Savaşı ne zaman oldu", store, mock_llm, test_config)
+
+    assert mock_llm.generate.call_count == 2
+    ilk_cagri_kwargs = mock_llm.generate.call_args_list[0].kwargs
+    assert ilk_cagri_kwargs["max_tokens"] == test_config.llm_max_output_tokens
+    assert ilk_cagri_kwargs["num_ctx"] == test_config.llm_num_ctx
+
+    ikinci_cagri_kwargs = mock_llm.generate.call_args_list[1].kwargs
+    assert ikinci_cagri_kwargs["max_tokens"] == test_config.llm_verify_max_tokens
+    assert ikinci_cagri_kwargs["num_ctx"] == test_config.llm_num_ctx
+

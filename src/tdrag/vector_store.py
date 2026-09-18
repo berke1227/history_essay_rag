@@ -41,6 +41,17 @@ class VectorStore:
         self._threshold = similarity_threshold
         self._dedup_threshold = dedup_jaccard_threshold
 
+    def count(self) -> int:
+        """Koleksiyondaki toplam parça sayısını döndürür."""
+        return self._collection.count()
+
+    def get_indexed_files(self) -> set[str]:
+        """Koleksiyonda halihazırda indekslenmiş benzersiz dosya adlarını döndürür."""
+        if self._collection.count() == 0:
+            return set()
+        metalar = self._collection.get(include=["metadatas"])["metadatas"]
+        return {m["source_file"] for m in metalar if m and "source_file" in m}
+
     def add_chunks(self, chunks: list[Chunk]) -> int:
         """Parçaları ekler. `upsert` kullanılır: aynı dosya tekrar işlenirse
         (aynı chunk id) kayıt çoğalmaz, üzerine yazılır — bu, ayrı bir

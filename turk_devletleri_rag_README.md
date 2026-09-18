@@ -31,32 +31,27 @@ soru ─────────────────────────
                                        Cevap
 ```
 
-LLM adımları (üret + doğrula) `ollama` (yerel), `anthropic`, `openai`,
-`gemini` veya ağa çıkmayan `mock` sağlayıcılarından biriyle çalışır —
-hepsi tek bir `LLMProvider` arayüzünü uygular (bkz. `src/tdrag/providers/`).
+LLM adımları (üret + doğrula) yerel **`ollama`** (`qwen3.5:4b`) veya
+ağa çıkmayan `mock` sağlayıcısı ile çalışır (bkz. `src/tdrag/providers/`).
+Model seviyesinde thinking/reasoning kapatılmış ve yanıtlar filtrelenmiştir.
 
 ## Kurulum
 
 ```bash
 uv sync --extra dev          # temel + test bağımlılıkları
-# gerçek kullanım için embedding ve seçtiğiniz LLM sağlayıcısını da ekleyin:
-uv sync --extra dev --extra embeddings --extra anthropic   # örnek
+# Sentence-transformer embedding desteği için:
+uv sync --extra dev --extra embeddings
 cp .env.example .env         # ve .env dosyasını doldurun
 ```
 
-`pyproject.toml`daki opsiyonel gruplar (`embeddings`, `anthropic`,
-`openai`, `gemini`, `all`) kasıtlı olarak ayrıdır: her sağlayıcının
-SDK'sı yalnızca o sağlayıcı gerçekten seçilince "lazy import" edilir,
-böylece kullanmadığınız ağır bağımlılıkları (ör. `sentence-transformers`
-+ `torch`) kurmak zorunda kalmazsınız.
-
 ## Kullanım
 
-1. Kendi ~13 makalenizi `makaleler/` klasörüne PDF olarak koyun
-   (şu an 3 sentetik test makalesi var — bkz. aşağıdaki "Test verisi").
-2. `.env` dosyasında `TDRAG_LLM_PROVIDER` ve `TDRAG_LLM_MODEL`'i
-   ayarlayın (ör. `ollama` + `qwen3:8b`, ya da `anthropic` +
-   `claude-sonnet-5`).
+1. Makalelerinizi `makaleler/` klasörüne PDF olarak koyun.
+2. Ollama'da modelin kurulu olduğundan emin olun:
+   ```bash
+   ollama run qwen3.5:4b
+   ```
+3. `.env` dosyasında ayarları kontrol edin (varsayılan: `ollama` + `qwen3.5:4b`).
 3. Çalıştırın:
 
 ```bash
@@ -161,10 +156,7 @@ src/tdrag/
 └── providers/
     ├── base.py               # LLMProvider Protocol
     ├── mock_provider.py        # ağa çıkmayan test/demo sağlayıcı
-    ├── ollama_provider.py       # yerel
-    ├── anthropic_provider.py     # API
-    ├── openai_provider.py         # API
-    └── gemini_provider.py          # API
+    └── ollama_provider.py       # yerel Ollama (thinking/reasoning kapalı)
 
 tests/            # 46 test, tamamı mock/hashing ile (ağa çıkmaz)
 scripts/generate_sample_pdfs.py    # sentetik test PDF üretici

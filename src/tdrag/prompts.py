@@ -36,7 +36,7 @@ KAYNAK ALINTILAR:
 3. Eğer soru kaynak alıntılarda geçmiyorsa, cevap bunu doğru şekilde belirtiyor mu (araştırma yapmaya çalışmadan)?
 
 SADECE aşağıdaki JSON formatında yanıt ver, başka hiçbir metin ekleme:
-{{"gecti": true veya false, "geri_bildirim": "sorun varsa kısa ve somut açıklama, yoksa boş string"}}"""
+{{"gecti": true veya false, "geri_bildirim": "sorun varsa en fazla 1-2 cümlelik kısa ve somut açıklama, yoksa boş string"}}"""
 
 
 def answer_prompt_olustur(question: str, context: str, feedback: str | None) -> str:

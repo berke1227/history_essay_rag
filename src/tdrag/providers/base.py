@@ -5,4 +5,13 @@ from typing import Protocol
 
 
 class LLMProvider(Protocol):
-    def generate(self, prompt: str) -> str: ...
+    def generate(
+        self,
+        prompt: str,
+        *,
+        max_tokens: int | None = None,
+        num_ctx: int | None = None,
+        temperature: float | None = None,
+        **kwargs,
+    ) -> str: ...
+

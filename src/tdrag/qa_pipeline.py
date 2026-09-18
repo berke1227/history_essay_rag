@@ -31,13 +31,31 @@ def answer_question(
     if not ilgili_parcalar:
         return Answer(text=KAPSAM_DISI_MESAJI, grounded=True, attempts=0, sources=[])
 
-    context = _baglam_olustur(ilgili_parcalar)
+    context = _baglam_olustur(ilgili_parcalar, max_words=config.max_context_words)
     kaynaklar = sorted({p.chunk.source_file for p in ilgili_parcalar})
     return _uret_ve_dogrula(question, context, kaynaklar, llm, config)
 
 
-def _baglam_olustur(parcalar: list[RetrievedChunk]) -> str:
-    return "\n\n---\n\n".join(f"[Kaynak: {p.chunk.source_file}]\n{p.chunk.text}" for p in parcalar)
+def _baglam_olustur(parcalar: list[RetrievedChunk], max_words: int | None = None) -> str:
+    if not parcalar:
+        return ""
+    if max_words is None:
+        return "\n\n---\n\n".join(
+            f"[Kaynak: {p.chunk.source_file}]\n{p.chunk.text}" for p in parcalar
+        )
+
+    secilen_metinler: list[str] = []
+    toplam_kelime = 0
+    for p in parcalar:
+        parca_metni = f"[Kaynak: {p.chunk.source_file}]\n{p.chunk.text}"
+        kelime_sayisi = len(parca_metni.split())
+        # En az ilk parçayı ekle; sonrakiler bütçeyi aşıyorsa eklemeyi durdur
+        if secilen_metinler and (toplam_kelime + kelime_sayisi > max_words):
+            break
+        secilen_metinler.append(parca_metni)
+        toplam_kelime += kelime_sayisi
+
+    return "\n\n---\n\n".join(secilen_metinler)
 
 
 def _uret_ve_dogrula(
@@ -47,8 +65,12 @@ def _uret_ve_dogrula(
     cevap_metni = ""
 
     for deneme in range(1, config.max_verification_attempts + 1):
-        cevap_metni = llm.generate(answer_prompt_olustur(question, context, geri_bildirim))
-        dogrulama = _dogrula(question, context, cevap_metni, llm)
+        cevap_metni = llm.generate(
+            answer_prompt_olustur(question, context, geri_bildirim),
+            max_tokens=config.llm_max_output_tokens,
+            num_ctx=config.llm_num_ctx,
+        )
+        dogrulama = _dogrula(question, context, cevap_metni, llm, config)
 
         if dogrulama.passed and _yeterli_uzunlukta(cevap_metni, config.min_answer_word_count):
             return Answer(text=cevap_metni, grounded=True, attempts=deneme, sources=kaynaklar)
@@ -66,8 +88,20 @@ def _uret_ve_dogrula(
     )
 
 
-def _dogrula(question: str, context: str, answer: str, llm: LLMProvider) -> VerificationResult:
-    ham_yanit = llm.generate(verify_prompt_olustur(question, context, answer))
+def _dogrula(
+    question: str,
+    context: str,
+    answer: str,
+    llm: LLMProvider,
+    config: Config | None = None,
+) -> VerificationResult:
+    max_tokens = config.llm_verify_max_tokens if config is not None else 150
+    num_ctx = config.llm_num_ctx if config is not None else None
+    ham_yanit = llm.generate(
+        verify_prompt_olustur(question, context, answer),
+        max_tokens=max_tokens,
+        num_ctx=num_ctx,
+    )
     try:
         veri = json.loads(_json_bloguna_indir(ham_yanit))
         return VerificationResult(
@@ -78,12 +112,37 @@ def _dogrula(question: str, context: str, answer: str, llm: LLMProvider) -> Veri
         return VerificationResult(passed=False, feedback="Doğrulayıcı yanıtı ayrıştırılamadı.")
 
 
+
 def _json_bloguna_indir(metin: str) -> str:
-    """Model JSON'u ```json ... ``` bloğuna sarmışsa temizler."""
+    """Model JSON'u ```json ... ``` bloğuna sarmışsa veya etrafına açıklama eklemişse JSON nesnesini ayıklar."""
+    import re
+
     metin = metin.strip()
-    if metin.startswith("```"):
-        metin = metin.strip("`").removeprefix("json").strip()
-    return metin
+    # 1. ```json ... ``` veya ``` ... ``` bloklarını ara
+    kod_blogu = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", metin, re.DOTALL)
+    if kod_blogu:
+        ayiklanan = kod_blogu.group(1).strip()
+    else:
+        # 2. Metin içinde süslü parantez bloğunu ara
+        suslu_parantez = re.search(r"(\{.*\})", metin, re.DOTALL)
+        if suslu_parantez:
+            ayiklanan = suslu_parantez.group(1).strip()
+        elif "{" in metin:
+            # Açılmış ama kapanmamış/kesilmiş JSON bloğu
+            ayiklanan = metin[metin.find("{") :].strip()
+        else:
+            if metin.startswith("```"):
+                metin = metin.strip("`").removeprefix("json").strip()
+            ayiklanan = metin
+
+    # Kesilmiş JSON tamiri (kapanmamış tırnak veya süslü parantez)
+    if ayiklanan.startswith("{") and not ayiklanan.endswith("}"):
+        if ayiklanan.count('"') % 2 != 0:
+            ayiklanan = ayiklanan + '"'
+        ayiklanan = ayiklanan + "}"
+
+    return ayiklanan
+
 
 
 def _kapsam_disi_mi(metin: str) -> bool:

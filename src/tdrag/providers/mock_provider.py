@@ -22,7 +22,15 @@ class MockLLMProvider:
         self._responses = responses
         self._index = 0
 
-    def generate(self, prompt: str) -> str:
+    def generate(
+        self,
+        prompt: str,
+        *,
+        max_tokens: int | None = None,
+        num_ctx: int | None = None,
+        temperature: float | None = None,
+        **kwargs,
+    ) -> str:
         if self._responses is not None:
             yanit = self._responses[min(self._index, len(self._responses) - 1)]
             self._index += 1
@@ -31,3 +39,4 @@ class MockLLMProvider:
         if _DOGRULAMA_ISARETI in prompt:
             return '{"gecti": true, "geri_bildirim": ""}'
         return _VARSAYILAN_CEVAP
+

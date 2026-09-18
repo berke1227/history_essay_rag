@@ -12,7 +12,22 @@ from pathlib import Path
 
 from fpdf import FPDF
 
-FONT_PATH = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+
+def _bul_ttf_font() -> str | None:
+    """İşletim sistemine uygun, Türkçe karakter destekleyen bir TTF font arar."""
+    olasi_yollar = [
+        Path("C:/Windows/Fonts/arial.ttf"),
+        Path("C:/Windows/Fonts/calibri.ttf"),
+        Path("C:/Windows/Fonts/segoeui.ttf"),
+        Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"),
+        Path("/usr/share/fonts/dejavu/DejaVuSans.ttf"),
+        Path("/System/Library/Fonts/Supplemental/Arial.ttf"),
+    ]
+    for yol in olasi_yollar:
+        if yol.exists():
+            return str(yol)
+    return None
+
 
 MAKALELER = {
     "goktürk_kaganligi.pdf": (
@@ -73,15 +88,24 @@ Nizamiye medreseleri kurulmuştur.""",
 def olustur(cikti_klasoru: Path) -> list[Path]:
     cikti_klasoru.mkdir(parents=True, exist_ok=True)
     yollar = []
+    font_yolu = _bul_ttf_font()
+
     for dosya_adi, (baslik, govde) in MAKALELER.items():
         pdf = FPDF()
         pdf.add_page()
-        pdf.add_font("DejaVu", "", FONT_PATH)
-        pdf.set_font("DejaVu", size=16)
-        pdf.multi_cell(0, 10, baslik)
-        pdf.ln(4)
-        pdf.set_font("DejaVu", size=11)
-        pdf.multi_cell(0, 7, govde.strip())
+        if font_yolu:
+            pdf.add_font("CustomUnicode", "", font_yolu)
+            pdf.set_font("CustomUnicode", size=16)
+            pdf.multi_cell(0, 10, baslik)
+            pdf.ln(4)
+            pdf.set_font("CustomUnicode", size=11)
+            pdf.multi_cell(0, 7, govde.strip())
+        else:
+            pdf.set_font("Helvetica", size=16)
+            pdf.multi_cell(0, 10, baslik.encode("latin-1", errors="replace").decode("latin-1"))
+            pdf.ln(4)
+            pdf.set_font("Helvetica", size=11)
+            pdf.multi_cell(0, 7, govde.strip().encode("latin-1", errors="replace").decode("latin-1"))
 
         yol = cikti_klasoru / dosya_adi
         pdf.output(str(yol))

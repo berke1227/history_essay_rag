@@ -15,8 +15,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-DESTEKLENEN_SAGLAYICILAR = {"ollama", "anthropic", "openai", "gemini", "mock"}
-DESTEKLENEN_EMBEDDING_BACKENDLERI = {"sentence-transformer", "hashing"}
+DESTEKLENEN_SAGLAYICILAR = {"ollama", "mock"}
+DESTEKLENEN_EMBEDDING_BACKENDLERI = {"sentence-transformer", "ollama", "hashing"}
 
 
 def _env_int(anahtar: str, varsayilan: int) -> int:
@@ -56,7 +56,7 @@ class Config:
         default_factory=lambda: _env_int("TDRAG_CHUNK_OVERLAP_WORDS", 40)
     )
 
-    top_k: int = field(default_factory=lambda: _env_int("TDRAG_TOP_K", 5))
+    top_k: int = field(default_factory=lambda: _env_int("TDRAG_TOP_K", 4))
     similarity_threshold: float = field(
         default_factory=lambda: _env_float("TDRAG_SIMILARITY_THRESHOLD", 0.25)
     )
@@ -71,8 +71,20 @@ class Config:
         default_factory=lambda: _env_int("TDRAG_MIN_ANSWER_WORD_COUNT", 40)
     )
 
-    llm_provider: str = field(default_factory=lambda: os.getenv("TDRAG_LLM_PROVIDER", "mock"))
-    llm_model: str = field(default_factory=lambda: os.getenv("TDRAG_LLM_MODEL", ""))
+    # --- Token ve Bağlam Penceresi Sınırları ---
+    llm_num_ctx: int = field(default_factory=lambda: _env_int("TDRAG_LLM_NUM_CTX", 6144))
+    llm_max_output_tokens: int = field(
+        default_factory=lambda: _env_int("TDRAG_LLM_MAX_OUTPUT_TOKENS", 450)
+    )
+    llm_verify_max_tokens: int = field(
+        default_factory=lambda: _env_int("TDRAG_LLM_VERIFY_MAX_TOKENS", 250)
+    )
+    max_context_words: int = field(
+        default_factory=lambda: _env_int("TDRAG_MAX_CONTEXT_WORDS", 1000)
+    )
+
+    llm_provider: str = field(default_factory=lambda: os.getenv("TDRAG_LLM_PROVIDER", "ollama"))
+    llm_model: str = field(default_factory=lambda: os.getenv("TDRAG_LLM_MODEL", "qwen3.5:4b"))
     embedding_model: str = field(
         default_factory=lambda: os.getenv(
             "TDRAG_EMBEDDING_MODEL", "paraphrase-multilingual-MiniLM-L12-v2"
@@ -102,6 +114,23 @@ class Config:
         if self.min_answer_word_count < 1:
             raise ValueError(
                 f"min_answer_word_count pozitif olmalı, alınan: {self.min_answer_word_count}"
+            )
+        if self.llm_num_ctx <= 0:
+            raise ValueError(f"llm_num_ctx pozitif olmalı, alınan: {self.llm_num_ctx}")
+        if self.llm_max_output_tokens <= 0:
+            raise ValueError(
+                f"llm_max_output_tokens pozitif olmalı, alınan: {self.llm_max_output_tokens}"
+            )
+        if self.llm_verify_max_tokens <= 0:
+            raise ValueError(
+                f"llm_verify_max_tokens pozitif olmalı, alınan: {self.llm_verify_max_tokens}"
+            )
+        if self.max_context_words <= 0:
+            raise ValueError(f"max_context_words pozitif olmalı, alınan: {self.max_context_words}")
+        if self.llm_max_output_tokens >= self.llm_num_ctx:
+            raise ValueError(
+                f"llm_max_output_tokens ({self.llm_max_output_tokens}) "
+                f"llm_num_ctx'ten ({self.llm_num_ctx}) küçük olmalı"
             )
         if self.llm_provider not in DESTEKLENEN_SAGLAYICILAR:
             raise ValueError(

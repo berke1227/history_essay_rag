@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/turk_devletleri_rag.iml" filepath="$PROJECT_DIR$/.idea/turk_devletleri_rag.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/turk-devletleri-rag.iml" filepath="$PROJECT_DIR$/.idea/turk-devletleri-rag.iml" />
     </modules>
   </component>
 </project>

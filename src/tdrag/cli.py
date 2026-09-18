@@ -2,9 +2,14 @@
 from __future__ import annotations
 
 import logging
+import sys
 
 from .config import Config
-from .embeddings import HashingEmbeddingFunction, SentenceTransformerEmbeddingFunction
+from .embeddings import (
+    HashingEmbeddingFunction,
+    OllamaEmbeddingFunction,
+    SentenceTransformerEmbeddingFunction,
+)
 from .ingestion import ingest_folder
 from .providers import create_provider
 from .qa_pipeline import answer_question
@@ -12,10 +17,19 @@ from .vector_store import VectorStore
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+        sys.stderr.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+
 
 def _embedding_fonksiyonu_olustur(config: Config):
     if config.embedding_backend == "hashing":
         return HashingEmbeddingFunction()
+    if config.embedding_backend == "ollama":
+        return OllamaEmbeddingFunction(config.embedding_model or "nomic-embed-text")
     return SentenceTransformerEmbeddingFunction(config.embedding_model)
 
 
@@ -29,12 +43,18 @@ def main() -> None:
         dedup_jaccard_threshold=config.dedup_jaccard_threshold,
     )
 
-    print(f"'{config.articles_folder}' klasöründeki makaleler işleniyor...")
+    print(f"'{config.articles_folder}' klasörü ve vektör veritabanı kontrol ediliyor...")
     sonuc = ingest_folder(config, vector_store)
-    print(
-        f"{sonuc['islenen_dosya_sayisi']} makale, {sonuc['toplam_parca_sayisi']} parça "
-        f"olarak indekslendi. ({sonuc['atlanan_dosya_sayisi']} dosya atlandı)"
-    )
+    if sonuc.get("atlandi_mi"):
+        print(
+            f"Vektör veritabanı hazır: {sonuc['zaten_var_olan_sayisi']} makale "
+            f"({sonuc['toplam_parca_sayisi']} parça) zaten yüklü. Yeniden indeksleme atlandı."
+        )
+    else:
+        print(
+            f"{sonuc['islenen_dosya_sayisi']} makale indekslendi. "
+            f"Toplam {sonuc['toplam_parca_sayisi']} parça hazır."
+        )
     if sonuc["atlanan_dosyalar"]:
         print("Atlanan dosyalar:", ", ".join(sonuc["atlanan_dosyalar"]))
 
