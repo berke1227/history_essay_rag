@@ -8,6 +8,7 @@ KURALLAR:
 1. SADECE aşağıdaki "MAKALE ALINTILARI" bölümünde geçen bilgileri kullan. Dışarıdan bilgi ekleme, tahmin yürütme veya araştırma yapma.
 2. Eğer sorunun cevabı alıntılarda yoksa, başka hiçbir şey eklemeden şunu söyle: "Bu konu verilen makalelerde ele alınmamış."
 3. Cevap bulunabiliyorsa en az bir paragraf uzunluğunda, açıklayıcı ve akıcı olmalı.
+4. Eğer alıntılarda birden fazla farklı makale veya devlet geçiyorsa, SADECE soruda sorulan konu/devlet ile ilgili olan bilgileri kullan. Alıntılardaki diğer alakasız devletlerden veya konulardan ASLA bahsetme.
 {geri_bildirim_bolumu}
 MAKALE ALINTILARI:
 {context}
@@ -31,9 +32,14 @@ KAYNAK ALINTILAR:
 {answer}
 
 Şu üç kriteri kontrol et:
-1. Cevap SADECE kaynak alıntılara dayanıyor mu (uydurma/dışarıdan bilgi yok mu)?
+1. Cevap SADECE kaynak alıntılarda yer alan bilgilere dayanıyor mu (alıntılarda hiç bulunmayan tamamen uydurma/dış dünya bilgisi var mı)?
 2. Cevap en az bir paragraf uzunluğunda, dolu ve açıklayıcı mı?
-3. Eğer soru kaynak alıntılarda geçmiyorsa, cevap bunu doğru şekilde belirtiyor mu (araştırma yapmaya çalışmadan)?
+3. Eğer soru kaynak alıntılarda geçmiyorsa, cevap bunu doğru şekilde belirtiyor mu ("Bu konu verilen makalelerde ele alınmamış")?
+
+ÖNEMLİ KILAVUZ:
+- Eşanlamlı sözcükler, doğal cümle yapıları veya alıntıdaki bilgilerin akıcı şekilde özetlenmesi uydurma sayılmaz.
+- Cevabın reddedilmesi için kaynakta hiç olmayan uydurma bir olgu veya açık bir tahrifat bulunmalıdır.
+- Soru belirli bir konuya yönelikse (örneğin Normanlar), cevabın sadece o konuyu ele alması doğrudur; alıntılardaki diğer alakasız devletlerin cevapta geçmemesi bir eksiklik değildir.
 
 SADECE aşağıdaki JSON formatında yanıt ver, başka hiçbir metin ekleme:
 {{"gecti": true veya false, "geri_bildirim": "sorun varsa en fazla 1-2 cümlelik kısa ve somut açıklama, yoksa boş string"}}"""

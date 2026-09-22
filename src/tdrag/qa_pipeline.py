@@ -24,9 +24,13 @@ KAPSAM_DISI_MESAJI = "Bu konu verilen makalelerde ele alınmamış."
 
 
 def answer_question(
-    question: str, vector_store: VectorStore, llm: LLMProvider, config: Config
+    question: str,
+    vector_store: VectorStore,
+    llm: LLMProvider,
+    config: Config,
+    source_file: str | None = None,
 ) -> Answer:
-    ilgili_parcalar = vector_store.query(question, top_k=config.top_k)
+    ilgili_parcalar = vector_store.query(question, top_k=config.top_k, source_file=source_file)
 
     if not ilgili_parcalar:
         return Answer(text=KAPSAM_DISI_MESAJI, grounded=True, attempts=0, sources=[])

@@ -46,7 +46,7 @@ def test_sifir_top_k_reddedilir():
 def test_varsayilan_token_ve_baglam_degerleri():
     cfg = Config()
     assert cfg.llm_num_ctx == 6144
-    assert cfg.llm_max_output_tokens == 450
+    assert cfg.llm_max_output_tokens == 500
     assert cfg.llm_verify_max_tokens == 250
     assert cfg.max_context_words == 1000
     assert cfg.top_k == 4

@@ -74,7 +74,7 @@ class Config:
     # --- Token ve Bağlam Penceresi Sınırları ---
     llm_num_ctx: int = field(default_factory=lambda: _env_int("TDRAG_LLM_NUM_CTX", 6144))
     llm_max_output_tokens: int = field(
-        default_factory=lambda: _env_int("TDRAG_LLM_MAX_OUTPUT_TOKENS", 450)
+        default_factory=lambda: _env_int("TDRAG_LLM_MAX_OUTPUT_TOKENS", 500)
     )
     llm_verify_max_tokens: int = field(
         default_factory=lambda: _env_int("TDRAG_LLM_VERIFY_MAX_TOKENS", 250)

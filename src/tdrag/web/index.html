@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HISTORIA AQUILAE | Kartalın Tarihi & Tarih Araştırma Platformu</title>
+  <meta name="description" content="Kutsal Roma İmparatoru II. Friedrich mirasıyla, onaylı tarihi makale vesikalarına dayalı doğrulamalı akademik RAG yapay zeka asistanı.">
+  
+  <!-- Google Fonts: Cinzel (Imperial Latin Serif) & Inter (UI) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cinzel+Decorative:wght@700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="medieval-theme">
+
+  <!-- İNTERAKTİF KARTAL İNİŞ EKRANI (EAGLE LANDING HERO OVERLAY) -->
+  <div class="eagle-landing-hero" id="eagleLandingHero">
+    <div class="hero-bg-layer hero-bg-sky" id="heroBgSky"></div>
+    <div class="hero-bg-layer hero-bg-landed" id="heroBgLanded"></div>
+    <div class="hero-ambient-vignette"></div>
+
+    <div class="hero-modal-card" id="heroModalCard">
+      <div class="hero-seal-wrapper">
+        <img src="/static/assets/historia_aquilae_logo.png" alt="Historia Aquilae Imperial Crest" class="hero-imperial-seal">
+      </div>
+      <span class="hero-motto">ANNALES ET GESTA IMPERII • SICILIA & ROMA</span>
+      <h1 class="hero-main-title">HISTORIA AQUILAE</h1>
+      <p class="hero-latin-subtitle">Ex Libris Friderici II • Kartalın Tarihi</p>
+      <p class="hero-description">
+        Kutsal Roma İmparatoru ve Sicilya Kralı II. Friedrich'in ilim mirasında; 
+        birincil tarihi vesikalar, imparatorluk kronikleri ve akademik makaleler üzerinden araştırmaya başlayın.
+      </p>
+      
+      <button type="button" class="btn-eagle-land" id="startExploreBtn">
+        <span class="eagle-icon">🦅</span>
+        <span>Kartalı Koluna İndir & Keşfe Başla</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="arrow-icon">
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+          <polyline points="12 5 19 12 12 19"></polyline>
+        </svg>
+      </button>
+      <span class="hero-hint">Tıklayarak imparatorluk kartalını indirin ve araştırma salonuna girin</span>
+    </div>
+  </div>
+
+  <!-- PERSISTENT CANLI ARKA PLAN (Landed Background for Workstation) -->
+  <div class="ambient-app-bg" id="ambientAppBg"></div>
+
+  <!-- ANA UYGULAMA DÜZENİ (APP WORKSTATION) -->
+  <div class="app-layout" id="appLayout">
+    
+    <!-- SOL KENAR ÇUBUĞU (SIDEBAR & MENÜ) -->
+    <aside class="sidebar" id="sidebar">
+      <!-- Logo ve Başlık -->
+      <div class="sidebar-header">
+        <div class="brand-badge">
+          <div class="brand-avatar">
+            <img src="/static/assets/historia_aquilae_logo.png" alt="Historia Aquilae Logo" class="brand-logo-img">
+          </div>
+          <div class="brand-text">
+            <h2 class="cinzel-title">HISTORIA AQUILAE</h2>
+            <span class="brand-subtitle">De Re Historica • Fridericus II</span>
+          </div>
+        </div>
+        <button id="closeSidebarBtn" class="icon-btn mobile-only" aria-label="Menüyü Kapat">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <!-- Canlı Durum ve Model Bilgisi -->
+      <div class="status-card" id="statusCard">
+        <div class="status-indicator">
+          <span class="pulse-dot"></span>
+          <span class="status-label" id="modelStatusText">İmparatorluk Arşivi Aktif</span>
+        </div>
+        <div class="status-details">
+          <div class="stat-pill"><span class="pill-title">Model:</span> <span id="statModel">qwen3.5:4b</span></div>
+          <div class="stat-pill"><span class="pill-title">Bağlam:</span> <span id="statNumCtx">6K (6144)</span></div>
+          <div class="stat-pill"><span class="pill-title">İndeks:</span> <span id="statChunks">0 Parça</span></div>
+        </div>
+      </div>
+
+      <!-- MAKALE YÜKLEME ALANI (UPLOAD SECTION) -->
+      <div class="sidebar-section">
+        <div class="section-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+          <h3>Makale Yükle (PDF)</h3>
+        </div>
+        <div class="upload-dropzone" id="uploadDropzone">
+          <input type="file" id="pdfFileInput" accept=".pdf" multiple hidden>
+          <div class="dropzone-content">
+            <div class="upload-icon-circle">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+            </div>
+            <p class="dropzone-text">PDF vesikalarını buraya sürükleyin</p>
+            <button type="button" id="browseFilesBtn" class="btn-browse">Dosya Seçin</button>
+          </div>
+          <div class="upload-progress" id="uploadProgress" style="display: none;">
+            <div class="progress-bar-track">
+              <div class="progress-bar-fill" id="uploadProgressBar"></div>
+            </div>
+            <span class="progress-text" id="uploadProgressText">İşleniyor ve indeksleniyor...</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- MAKALE KÜTÜPHANESİ (ARTICLE LIBRARY) - KATLANABİLİR BAŞLIK -->
+      <div class="sidebar-section library-section" id="librarySection">
+        <div class="section-title collapsible-header" id="libraryToggleBtn" title="Makaleleri gizle / göster">
+          <div class="title-left">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 19.5a2.5 2.5 0 0 0 2.5 2.5H20M4 19.5V4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5z"/></svg>
+            <h3>Makaleler (<span id="articleCount">0</span>)</h3>
+          </div>
+          <div class="title-right">
+            <button id="reindexBtn" class="icon-refresh-btn" title="Yeniden İndeksle" onclick="event.stopPropagation()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            </button>
+            <span class="accordion-chevron" id="libraryChevron">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </span>
+          </div>
+        </div>
+        
+        <div class="library-collapsible-content" id="libraryCollapsibleContent">
+          <div class="search-box">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="articleSearchInput" placeholder="Makalelerde ara...">
+          </div>
+
+          <div class="article-list-container" id="articleListContainer">
+            <div class="empty-state-list" id="loadingArticles">
+              <span class="spinner-sm"></span> Makaleler listeleniyor...
+            </div>
+            <ul class="article-list" id="articleList"></ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Alt Bilgi / Versiyon -->
+      <div class="sidebar-footer">
+        <div class="system-tag">
+          <span class="shield-icon">🦅</span>
+          <span>Historia Aquilae • Sıfır Halüsinasyon</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ORTA / ANA SOHBET ALANI (MAIN CONTENT) -->
+    <main class="main-content">
+      
+      <!-- Üst Gezinme Çubuğu (Top Bar) -->
+      <header class="topbar">
+        <button id="openSidebarBtn" class="icon-btn mobile-only" aria-label="Menüyü Aç">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <div class="topbar-title">
+          <h1 class="cinzel-heading">HISTORIA AQUILAE</h1>
+          <p class="topbar-subtitle">Kutsal Roma - Sicilya İmparatorluk Arşivi & Doğrulamalı Tarih Asistanı</p>
+        </div>
+        <div class="topbar-actions">
+          <button id="replayHeroBtn" class="btn-subtle" title="Kartal İniş Sahnesini Yeniden Göster">
+            <span style="font-size: 1.05rem; line-height: 1;">🦅</span>
+            <span>Kartal Sahnesi</span>
+          </button>
+          <button id="clearChatBtn" class="btn-subtle" title="Sohbeti Temizle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            <span>Temizle</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Sohbet Mesajları Bölgesi -->
+      <div class="chat-container" id="chatContainer">
+        
+        <!-- Karşılama ve Örnek Sorular Ekranı -->
+        <div class="welcome-screen" id="welcomeScreen">
+          <div class="welcome-badge">Ex Libris Friderici II</div>
+          <h2 class="welcome-title">Tarih Vesikalarında Hakikatin Peşinde</h2>
+          <p class="welcome-desc">
+            Sisteme yüklenmiş akademik tezler, birincil vesikalar ve imparatorluk kronikleri üzerinden sorularınızı sorun. 
+            Cevaplar her adımda sıkı kaynak sadakati denetiminden geçirilir ve sayfa atıflarıyla sunulur.
+          </p>
+
+          <div class="quick-prompts-grid">
+            <button class="quick-prompt-card" data-prompt="Sicilya'nın Normanlar tarafından işgali nasıl gerçekleşti ve Robert Guiscard ile Roger'nin rolü neydi?">
+              <div class="prompt-icon">⚔️</div>
+              <div class="prompt-info">
+                <h4>Sicilya ve Normanlar (1060-1091)</h4>
+                <p>Hauteville hanedanı, Palermo kuşatması ve adanın fethi</p>
+              </div>
+            </button>
+
+            <button class="quick-prompt-card" data-prompt="Çaka Bey kimdir, İzmir'de nasıl bir faaliyet göstermiş ve Türk denizciliğindeki yeri nedir?">
+              <div class="prompt-icon">⚓</div>
+              <div class="prompt-info">
+                <h4>Çaka Bey ve İlk Türk Donanması</h4>
+                <p>İzmir fethi, Ege adaları ve tersanecilik faaliyetleri</p>
+              </div>
+            </button>
+
+            <button class="quick-prompt-card" data-prompt="Eski Türk devlet teşkilatında 'Ayguçı' kime denirdi ve görevleri nelerdi?">
+              <div class="prompt-icon">👑</div>
+              <div class="prompt-info">
+                <h4>Devlet Teşkilatı ve Ayguçı</h4>
+                <p>Kutadgu Bilig ışığında bilge danışmanlık ve vezirlik</p>
+              </div>
+            </button>
+
+            <button class="quick-prompt-card" data-prompt="Uygur hukuk vesikaları bize Uygurların sosyal ve ekonomik hayatı hakkında neler anlatır?">
+              <div class="prompt-icon">📜</div>
+              <div class="prompt-info">
+                <h4>Uygur Hukuk Vesikaları</h4>
+                <p>Şehirleşme, ticaret, çok dinli yapı ve yazılı sözleşmeler</p>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Dinamik Mesajlar Listesi -->
+        <div class="messages-stream" id="messagesStream"></div>
+
+        <!-- Yazıyor / Düşünüyor İndikatörü -->
+        <div class="typing-indicator-row" id="typingIndicator" style="display: none;">
+          <div class="assistant-avatar">
+            <img src="/static/assets/historia_aquilae_logo.png" alt="Historia Aquilae" class="avatar-seal-img">
+          </div>
+          <div class="thinking-bubble">
+            <div class="thinking-header">
+              <span class="spinner-ring"></span>
+              <span class="thinking-step" id="thinkingStepText">Vesikalar taranıyor ve bağlam toplanıyor...</span>
+            </div>
+            <div class="pulse-lines">
+              <div class="pulse-bar"></div>
+              <div class="pulse-bar"></div>
+              <div class="pulse-bar"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Sabit Alt Giriş Alanı (Input Bar) -->
+      <div class="input-area-wrapper">
+        <!-- AKTİF MAKALE ODAK KARTI/ROZETİ -->
+        <div class="focus-bar" id="focusBar" style="display: none;">
+          <div class="focus-badge">
+            <span class="focus-icon">🎯</span>
+            <span class="focus-label">Odak Makale:</span>
+            <span class="focus-filename" id="focusFilename">864443.pdf</span>
+          </div>
+          <button type="button" class="btn-clear-focus" id="clearFocusBtn" title="Tüm kütüphaneye dön">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            <span>Tüm Kütüphanede Ara</span>
+          </button>
+        </div>
+
+        <form id="chatForm" class="chat-form">
+          <div class="input-container">
+            <textarea 
+              id="chatInput" 
+              placeholder="Tarih makaleleri ve vesikalarıyla ilgili bir soru yazın... (Göndermek için Enter, alt satır için Shift+Enter)" 
+              rows="1"
+              required
+            ></textarea>
+            <button type="submit" id="sendBtn" class="btn-send" aria-label="Soruyu Gönder">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
+          </div>
+          <div class="input-footnote">
+            <span id="inputFootnoteText">💡 İpucu: Model kütüphanedeki makalelerde geçen bilgileri kullanır. Bir makaleye tıklayarak ona odaklanabilirsiniz.</span>
+          </div>
+        </form>
+      </div>
+
+    </main>
+
+  </div>
+
+  <!-- BİLDİRİM TOAST BİLEŞENİ -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

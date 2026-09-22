@@ -70,3 +70,35 @@ def test_dedup_neredeyse_ayni_parcalari_birlestirir(test_vector_store: VectorSto
     sonuclar = test_vector_store.query("Malazgirt Savaşı Selçuklular Bizans Alparslan", top_k=5)
     malazgirt_sonuclari = [r for r in sonuclar if "Malazgirt" in r.chunk.text]
     assert len(malazgirt_sonuclari) == 1
+
+
+def test_query_source_file_filtreler(test_vector_store: VectorStore):
+    test_vector_store.add_chunks(
+        [
+            Chunk(
+                id="doc1::0",
+                text="Normanlar Sicilya adasını 1060 yılında işgale başladı",
+                source_file="normanlar.pdf",
+                chunk_index=0,
+            ),
+            Chunk(
+                id="doc2::0",
+                text="Harezmşahlar Devleti Orta Asya'da hüküm sürdü",
+                source_file="harezm.pdf",
+                chunk_index=0,
+            ),
+        ]
+    )
+    # Sadece normanlar.pdf içinde ara
+    sonuclar = test_vector_store.query(
+        "Sicilya işgali ve tarih", top_k=5, source_file="normanlar.pdf"
+    )
+    assert len(sonuclar) >= 1
+    assert all(r.chunk.source_file == "normanlar.pdf" for r in sonuclar)
+
+    # Sadece harezm.pdf içinde ara
+    sonuclar_harezm = test_vector_store.query(
+        "hüküm sürdü", top_k=5, source_file="harezm.pdf"
+    )
+    assert len(sonuclar_harezm) >= 1
+    assert all(r.chunk.source_file == "harezm.pdf" for r in sonuclar_harezm)

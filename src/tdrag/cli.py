@@ -34,8 +34,15 @@ def _embedding_fonksiyonu_olustur(config: Config):
 
 
 def main() -> None:
+    if len(sys.argv) > 1 and sys.argv[1].lower() in {"web", "serve", "ui"}:
+        import uvicorn
+        print("TDRAG Web Arayüzü başlatılıyor: http://localhost:8000")
+        uvicorn.run("tdrag.web_api:app", host="0.0.0.0", port=8000, reload=False)
+        return
+
     config = Config()
     vector_store = VectorStore(
+
         persist_dir=config.chroma_persist_dir,
         collection_name=config.collection_name,
         embedding_function=_embedding_fonksiyonu_olustur(config),

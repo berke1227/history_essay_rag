@@ -66,13 +66,28 @@ class VectorStore:
         )
         return len(chunks)
 
-    def query(self, question: str, top_k: int) -> list[RetrievedChunk]:
-        aday_sayisi = max(top_k * 3, top_k)
-        sonuc = self._collection.query(query_texts=[question], n_results=aday_sayisi)
+    def query(
+        self, question: str, top_k: int, source_file: str | None = None
+    ) -> list[RetrievedChunk]:
+        total_chunks = self._collection.count()
+        if total_chunks == 0:
+            return []
+
+        aday_sayisi = min(max(top_k * 3, top_k), total_chunks)
+        query_kwargs: dict[str, Any] = {"query_texts": [question], "n_results": aday_sayisi}
+        if source_file:
+            query_kwargs["where"] = {"source_file": source_file}
+
+        sonuc = self._collection.query(**query_kwargs)
 
         adaylar = self._sonucu_adaylara_donustur(sonuc)
         esigi_gecenler = [a for a in adaylar if a.score >= self._threshold]
         esigi_gecenler.sort(key=lambda a: a.score, reverse=True)
+
+        if esigi_gecenler:
+            max_score = esigi_gecenler[0].score
+            rel_threshold = max(self._threshold, max_score * 0.75)
+            esigi_gecenler = [a for a in esigi_gecenler if a.score >= rel_threshold]
 
         return self._mukerrerleri_ele(esigi_gecenler)[:top_k]
 
