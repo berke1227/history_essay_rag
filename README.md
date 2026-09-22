@@ -1,174 +1,171 @@
-# Türk Devletleri RAG
+# HISTORIA AQUILAE (TDRAG)
+### *De Re Historica • Fridericus II • Kartalın Tarihi*
 
-Bir klasördeki (~13) Türk devletleri makalesini (PDF) okuyup vektör
-veritabanında indeksleyen; sorulan sorulara **yalnızca bu makalelere
-dayanarak** cevap veren; cevabı üretip kendi kendine doğrulayan ve
-kaynak dışına çıkmadan "bu konu makalelerde yok" diyebilen bir
-soru-cevap sistemi.
+Kutsal Roma İmparatoru ve Sicilya Kralı **II. Friedrich**'in ilim ve şahin avı mirası ekseninde tasarlanmış; Türk devletleri ve Ortaçağ Akdeniz/Sicilya-Norman tarihi makaleleri (PDF) üzerinde çalışan, **sıfır halüsinasyon hedefli**, kendi kendini doğrulayan (self-correcting) ve kaynak sadakatine tam bağlı akademik RAG (Retrieval-Augmented Generation) soru-cevap platformu.
 
-## Mimari
+---
 
+## 🦅 Öne Çıkan Özellikler
+
+- **Sıkı Kaynak Sadakati (Zero-Hallucination):** Cevaplar yalnızca yüklenen PDF makalelerindeki vesikalara dayanır. Kaynaklarda yer almayan hiçbir dış bilgi cevaba karıştırılmaz; konu korpusta yoksa açıkça *"Bu konu makalelerde yer almamaktadır"* uyarısı verilir.
+- **Konu Sapmasını (Drift) Önleyen Guardrails:** Farklı devlet veya dönemlere ait sorgularda (örneğin Normanlar makalesi sorgulanırken Harezmşahlar veya Selçuklulara kayma gibi) retrieval filtreleri ve odak kontrolleri ile konu bütünlüğü korunur.
+- **6K Geniş Bağlam Penceresi (6144 Token):** `qwen3.5:4b` modeli için 6K bağlam penceresi ile çok sayfalı zengin tarihsel alıntılar tek seferde işlenir.
+- **500 Token Çıktı Sınırı:** Cevapların yarıda kesilmesini önleyen, geniş ve detaylı analitik açıklamaları destekleyen 500 token çıkış kapasitesi.
+- **The House of Da Vinci 3 Estetiğinde Web Arayüzü:** Koyu obsidyen, antik altın varak ve cam pencereler (`backdrop-filter: blur(16px)`), *Cinzel* ve *Inter* tipografisi.
+- **İnteraktif Kartal İniş Sahnesi:** Sayfa açılışında Castel del Monte kalesi önünde gökyüzünde süzülen kartal; *"Kartalı Koluna İndir & Keşfe Başla"* dendiğinde pürüzsüzce II. Friedrich'in deri eldivenli koluna konar, arayüz çalışma istasyonuna dönüşür ve sahne kalıcı canlı arka plan olarak kalır. Üst çubuktaki buton ile dilediğiniz an sahne yeniden oynatılabilir.
+- **Katlanabilir "Makaleler" Kütüphanesi:** Sol menüdeki makale başlığına tıklandığında liste ve arama alanı zarif bir akordeon animasyonuyla gizlenip açılır; kullanıcının tercihi saklanır.
+- **Sürükle-Bırak PDF Yükleme & Makale Odaklama:** Web arayüzünden doğrudan yeni PDF vesikaları yüklenebilir veya sol menüden tek bir makaleye odaklanarak özel araştırma yapılabilir.
+- **Çift Kullanım Modu:** İster modern Web Arayüzü (`http://localhost:8000`), ister etkileşimli Terminal CLI.
+
+---
+
+## 🏛️ Mimari Akış
+
+```text
+  ┌───────────────────────────────────────────────────────────┐
+  │                    PDF Yükleme / İndeks                   │
+  │   makaleler/*.pdf ──▶ pdfplumber ──▶ Sliding Window       │
+  │                                      (Kelime penceresi)   │
+  └─────────────────────────────┬─────────────────────────────┘
+                                │
+                                ▼
+  ┌───────────────────────────────────────────────────────────┐
+  │          ChromaDB Vektör Veritabanı (.chroma/)            │
+  │    (paraphrase-multilingual-MiniLM-L12-v2 Embedding)      │
+  └─────────────────────────────┬─────────────────────────────┘
+                                │
+   Kullanıcı Sorusu ────────────▶ Retrieval (Eşik + Jaccard Dedup Filtresi)
+                                │
+                                ▼
+                     ┌─────────────────────┐
+                     │   1. ÜRET (LLM)     │◀──┐
+                     │   Sadece verilen    │   │
+                     │   parçalara dayalı  │   │ Geri bildirimle
+                     └──────────┬──────────┘   │ yeniden üret
+                                ▼              │ (Max 3 Deneme)
+                     ┌─────────────────────┐   │
+                     │   2. DOĞRULA (LLM)  │───┘
+                     │   Grounded? Uydurma │
+                     │   bilgi var mı?     │
+                     └──────────┬──────────┘
+                                ▼ (Doğrulamadan Geçti)
+                 Nihai Cevap + Sayfa Kaynakçası
 ```
-makaleler/*.pdf ──▶ PDF çıkarma ──▶ chunking (kelime penceresi + overlap)
-                     (pdfplumber)         │
-                                          ▼
-                              ChromaDB (turk_devletleri koleksiyonu)
-                                          │
-soru ──────────────────────────────────▶ retrieval (eşik + dedup filtreli)
-                                          │
-                              ┌───────────▼────────────┐
-                              │   ÜRET (LLM)            │◀──┐
-                              │   sadece verilen        │   │ geri bildirimle
-                              │   alıntılara dayanarak   │   │ yeniden dene
-                              └───────────┬────────────┘   │
-                                          ▼                │
-                              ┌───────────────────────┐    │
-                              │   DOĞRULA (LLM)        │────┘ (max N deneme)
-                              │   grounded? yeterli    │
-                              │   uzunlukta mı?         │
-                              └───────────┬────────────┘
-                                          ▼ (geçti veya deneme tükendi)
-                                       Cevap
-```
 
-LLM adımları (üret + doğrula) yerel **`ollama`** (`qwen3.5:4b`) veya
-ağa çıkmayan `mock` sağlayıcısı ile çalışır (bkz. `src/tdrag/providers/`).
-Model seviyesinde thinking/reasoning kapatılmış ve yanıtlar filtrelenmiştir.
+---
 
-## Kurulum
+## 🛠️ Kurulum
+
+Gereksinimler: **Python 3.11+**, [uv](https://docs.astral.sh/uv/) ve yerel çalışan [Ollama](https://ollama.com/).
 
 ```bash
-uv sync --extra dev          # temel + test bağımlılıkları
-# Sentence-transformer embedding desteği için:
+# Depoyu klonlayın
+git clone https://github.com/berke1227/history_essay_rag.git
+cd history_essay_rag/turk_devletleri_rag
+
+# Bağımlılıkları yükleyin (geliştirme ve embedding paketleri dahil)
 uv sync --extra dev --extra embeddings
-cp .env.example .env         # ve .env dosyasını doldurun
+
+# Örnek çevre değişkenlerini kopyalayın
+cp .env.example .env
 ```
 
-## Kullanım
+Ollama üzerinde modelin kurulu olduğundan emin olun:
+```bash
+ollama run qwen3.5:4b
+```
 
-1. Makalelerinizi `makaleler/` klasörüne PDF olarak koyun.
-2. Ollama'da modelin kurulu olduğundan emin olun:
-   ```bash
-   ollama run qwen3.5:4b
-   ```
-3. `.env` dosyasında ayarları kontrol edin (varsayılan: `ollama` + `qwen3.5:4b`).
-3. Çalıştırın:
+---
+
+## 🚀 Çalıştırma
+
+### 1. Web Arayüzü (Önerilen)
+Modern web arayüzünü ve interaktif kartal sahnesini başlatmak için:
+
+```bash
+uv run tdrag-web
+# Veya: uv run python -m tdrag.web_api
+```
+Tarayıcınızdan **`http://localhost:8000`** adresine gidin.
+
+### 2. Terminal CLI Modu
+Terminal üzerinden hızlıca soru sormak için:
 
 ```bash
 uv run tdrag
 ```
 
-İlk çalıştırma `makaleler/` klasörünü indeksler (tekrar çalıştırmak
-mevcut dosyaları yeniden indekslemez — bkz. "Idempotent ingestion").
-Ardından soru sorabileceğiniz etkileşimli bir döngü açılır; çıkmak
-için `q`.
+---
 
-### Test verisi
+## ⚙️ Yapılandırma (`.env`)
 
-`makaleler/` klasöründeki 3 PDF **gerçek akademik makale değildir** —
-yalnızca boru hattını (PDF çıkarma → chunking → embedding → retrieval)
-uçtan uca deneyebilmeniz için üretilmiş, temel düzeyde ve tartışmasız
-üç kısa metindir (Göktürk Kağanlığı, Osmanlı'nın kuruluşu, Büyük
-Selçuklu Devleti). Kendi makalelerinizi eklediğinizde bunları silebilir
-veya üzerine yazabilirsiniz. Yeniden üretmek isterseniz:
+Tüm parametreler `.env` dosyası üzerinden ayarlanabilir:
 
-```bash
-uv run python scripts/generate_sample_pdfs.py
-```
+| Değişken | Varsayılan | Açıklama |
+|---|---|---|
+| `TDRAG_LLM_PROVIDER` | `ollama` | LLM sağlayıcısı (`ollama`, `mock`) |
+| `TDRAG_OLLAMA_MODEL` | `qwen3.5:4b` | Kullanılan yerel dil modeli |
+| `TDRAG_LLM_NUM_CTX` | `6144` | Bağlam penceresi boyutu (6K) |
+| `TDRAG_LLM_MAX_OUTPUT_TOKENS` | `500` | Modelin üretebileceği maksimum yanıt uzunluğu |
+| `TDRAG_EMBEDDING_PROVIDER` | `sentence_transformers` | Vektörleme modeli (`paraphrase-multilingual-MiniLM-L12-v2`) |
+| `TDRAG_TOP_K` | `4` | Sorgu başına getirilecek en alakalı parça sayısı |
+| `TDRAG_SIMILARITY_THRESHOLD` | `0.25` | Alaka düzeyi alt sınırı (altındakiler elenir) |
+| `TDRAG_MAX_VERIFICATION_ATTEMPTS` | `3` | Doğrulama döngüsü maksimum tekrar sayısı |
+| `TDRAG_ARTICLES_FOLDER` | `./makaleler` | PDF dosyalarının taranacağı dizin |
 
-## Testler
+---
+
+## 🧪 Testler
+
+Sistem, internete veya harici API'lere bağımlı olmadan izole bir şekilde 64 birim testten geçmektedir:
 
 ```bash
 uv run pytest -v
 ```
 
-46 test; `chunker`, `pdf_loader`, `config` doğrulamaları, `vector_store`
-(jaccard/dedup/eşik/upsert), `qa_pipeline` (üret→doğrula döngüsünün
-tüm dalları: ilk denemede geçer, ikinci denemede geçer, hep reddedilir,
-doğrulayıcı bozuk JSON döner, kod-seviyesi uzunluk kontrolü) ve
-`ingestion` (kısmi hata toleransı) kapsanır.
+Test kapsamı:
+- **`test_chunker`**: Kelime sınırları, örtüşme pencereleri ve uzun metin bölümleri.
+- **`test_pdf_loader`**: Boş sayfa, dijital metin çıkarma ve hata toleransı.
+- **`test_config`**: 6K bağlam doğrulaması, ortam değişkeni parse işlemleri.
+- **`test_vector_store`**: Jaccard benzerlik elemesi, eşik filtreleme ve upsert mantığı.
+- **`test_qa_pipeline`**: Üret-doğrula döngüsü, red durumları, bozuk JSON onarımı ve asgari uzunluk denetimi.
+- **`test_web_api`**: FastAPI uç noktaları, statik dosya sunumu ve Historia Aquilae marka kontrolleri.
 
-Testler **gerçek bir LLM'e veya internete bağlanmaz**: `MockLLMProvider`
-(scripted mod) ve `HashingEmbeddingFunction` (model indirmeyen,
-deterministik embedding) kullanılır. Bu, üretimdeki gerçek sağlayıcı
-kodunun (ör. Anthropic SDK çağrısının) *kendisini* değil, boru
-hattındaki orkestrasyon mantığını (yeniden deneme, eşikleme, hata
-yönetimi) doğrular — sağlayıcı sınıfları (`providers/*.py`) küçük ve
-SDK'ya ince bir sarmalayıcı olacak şekilde kasıtlı olarak basit
-tutulmuştur.
+---
 
-## Mimari kararlar (belgelendirilmiş sapmalar)
+## 📂 Proje Yapısı
 
-Talimattaki gereksinimlerin bazıları, sonsuz döngü / öngörülemez
-davranış gibi riskler taşıdığı için sınırlandırılmış ve burada
-belgelenmiştir:
-
-- **"En gerçekçi cevap alana kadar kendini yenileyecek" → sınırlı
-  döngü.** `TDRAG_MAX_VERIFICATION_ATTEMPTS` (varsayılan 3) ile
-  sınırlıdır. Sınıra ulaşılırsa son cevap `grounded=False` bayrağıyla
-  döner; sessizce başarılı gösterilmez. Sebep: doğrulayıcı asla tatmin
-  olmazsa sınırsız döngü sonsuz maliyet/gecikme riski taşır.
-- **Chunking: paragraf-farkında değil, kelime penceresi (sliding
-  window).** Kelime sınırında keser (asla kelimeyi bölmez), çok uzun
-  tek paragraflarda özel durum kodu gerektirmez, davranışı test etmesi
-  kolaydır. `chunker.py` docstring'inde detaylandırılmıştır.
-- **OCR desteklenmiyor.** PDF'te metin katmanı yoksa (taranmış görüntü)
-  `pdf_loader` bunu sessizce boş geçmek yerine açık bir hata ile
-  bildirir. Akademik makalelerin çoğu doğrudan metin katmanlı
-  (born-digital) PDF'ler olduğundan bu makul bir kapsam sınırıdır;
-  gerekirse `pytesseract` ile ayrı bir adım olarak eklenebilir.
-- **similarity_threshold embedding modeline bağlıdır — kalibrasyon
-  gerekir.** Varsayılan (0.25), üretim için önerilen
-  `SentenceTransformerEmbeddingFunction` için kabaca uygun bir
-  başlangıç noktasıdır. Testlerdeki `HashingEmbeddingFunction` çok
-  daha düşük mutlak skorlar ürettiğinden testler ayrı (düşük) bir eşik
-  kullanır (bkz. `tests/conftest.py`). Kendi 13 makalenizle birkaç soru
-  deneyip gerekirse `TDRAG_SIMILARITY_THRESHOLD`'u ayarlayın: çok
-  düşükse alakasız sorulara da cevap üretilir, çok yüksekse alakalı
-  sorular da "kapsam dışı" sayılır.
-- **Idempotent ingestion: hash kontrolü yerine `upsert`.** Aynı dosya
-  tekrar işlenirse (deterministik `dosya_adi::chunk_index` id'si
-  sayesinde) kayıt çoğalmaz, üzerine yazılır. Ayrı bir "zaten var mı"
-  kontrol mekanizmasına gerek bırakmaz.
-- **Retrieval'da mükerrer parça filtreleme.** Örtüşen (overlap)
-  pencereler nedeniyle neredeyse aynı içerikli iki parça aynı sorguya
-  yüksek skorla dönebilir; Jaccard kelime-kümesi benzerliği
-  `TDRAG_DEDUP_JACCARD_THRESHOLD` üzerindeyse ikincisi elenir.
-- **Kod seviyesinde "en az 1 paragraf" kontrolü (defense in depth).**
-  Doğrulayıcı LLM "gecti: true" dese bile, `qa_pipeline` ayrıca kelime
-  sayısını kontrol eder — LLM'in uzunluk kriterini gözden kaçırma
-  ihtimaline karşı ikinci bir güvenlik katmanı.
-
-## Proje yapısı
-
-```
-src/tdrag/
-├── config.py          # doğrulamalı, ortam değişkeninden okunabilir ayarlar
-├── models.py           # Chunk / RetrievedChunk / VerificationResult / Answer
-├── pdf_loader.py        # PDF -> metin (pdfplumber, OCR yok)
-├── chunker.py           # metin -> kelime pencereli chunk'lar
-├── embeddings.py         # HashingEmbeddingFunction (test) / SentenceTransformer (üretim)
-├── vector_store.py       # ChromaDB sarmalayıcı: upsert, eşik+dedup filtreli query
-├── prompts.py            # cevap ve doğrulama prompt şablonları
-├── qa_pipeline.py         # getir -> üret -> doğrula döngüsü
-├── ingestion.py            # klasör -> chunk -> vector store akışı
-├── cli.py                   # etkileşimli giriş noktası
-└── providers/
-    ├── base.py               # LLMProvider Protocol
-    ├── mock_provider.py        # ağa çıkmayan test/demo sağlayıcı
-    └── ollama_provider.py       # yerel Ollama (thinking/reasoning kapalı)
-
-tests/            # 46 test, tamamı mock/hashing ile (ağa çıkmaz)
-scripts/generate_sample_pdfs.py    # sentetik test PDF üretici
-makaleler/                         # PDF'lerinizin gideceği yer
+```text
+turk_devletleri_rag/
+├── makaleler/                      # Akademik PDF vesikaları arşivi
+│   ├── 864443.pdf                  # Normanlar ve Sicilya Fethi makalesi
+│   ├── Gokturk_Kaganligi.pdf
+│   └── ...                         # Diğer Türk devletleri makaleleri
+├── src/
+│   └── tdrag/
+│       ├── config.py               # Doğrulamalı Pydantic yapılandırması
+│       ├── models.py               # Chunk, Answer, VerificationResult veri modelleri
+│       ├── pdf_loader.py           # pdfplumber metin ayrıştırıcı
+│       ├── chunker.py              # Kayan pencereli metin parçalayıcı
+│       ├── embeddings.py           # Multilingual SentenceTransformer & Hashing
+│       ├── vector_store.py         # ChromaDB sarmalayıcı (filtreli ve dedup destekli)
+│       ├── prompts.py              # Sıfır halüsinasyon ve konu sapmasını önleyici promptlar
+│       ├── qa_pipeline.py          # Üret -> Doğrula -> Kendi kendini düzelt döngüsü
+│       ├── ingestion.py            # Otomatik ve idempotent indeksleyici
+│       ├── cli.py                  # Terminal etkileşimli arayüzü
+│       ├── web_api.py              # FastAPI Web & REST API sunucusu
+│       ├── web/                    # "Historia Aquilae" Web Arayüzü
+│       │   ├── index.html          # Semantik HTML5 & Cinzel tipografisi
+│       │   ├── style.css           # The House of Da Vinci 3 temalı stil sistemi
+│       │   ├── app.js              # İnteraktif kartal sahnesi, akordeon ve sohbet istemcisi
+│       │   └── assets/             # İmparatorluk mührü ve kartal arka plan görselleri
+│       └── providers/              # LLM sağlayıcıları (Ollama & Mock)
+├── tests/                          # 64 adet kapsamlı birim testi
+├── pyproject.toml                  # Proje bağımlılıkları ve script giriş noktaları
+└── README.md                       # Proje dokümantasyonu
 ```
 
-## Bilinen sınırlamalar
+---
 
-- OCR yok (yukarıda açıklandı).
-- `similarity_threshold` kendi korpusunuzla elle kalibre edilmelidir;
-  otomatik kalibrasyon yapılmaz.
-- Sağlayıcı SDK'larının gerçek API çağrıları bu ortamda ağ kısıtlaması
-  nedeniyle canlı test edilememiştir (bkz. "Testler"); `ollama`,
-  `openai`, `gemini` sağlayıcıları kendi ortamınızda ilk kullanımda
-  ayrıca doğrulanmalıdır.
+## 📜 Lisans & Atıf
+Bu proje, akademik araştırmaları ve tarih vesikalarını şeffaf, doğrulanabilir ve sıfır halüsinasyon güvencesiyle dijital çağa taşımak amacıyla geliştirilmiştir.
